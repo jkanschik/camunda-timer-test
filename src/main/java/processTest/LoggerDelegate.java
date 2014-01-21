@@ -1,4 +1,4 @@
-package com.ista.dmi;
+package processTest;
 
 public interface LoggerDelegate {
 

@@ -1,20 +1,24 @@
 package processTest;
 
+
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.junit.Assert.*;
 
+import org.camunda.bpm.engine.ProcessEngineException;
 import org.camunda.bpm.engine.runtime.Job;
 import org.camunda.bpm.engine.test.Deployment;
 import org.camunda.bpm.engine.test.ProcessEngineRule;
 import org.camunda.bpm.engine.test.mock.Mocks;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import com.ista.dmi.LoggerDelegate;
+import processTest.LoggerDelegate;
 
 public class LoggerDelegateTest {
 
@@ -28,6 +32,7 @@ public class LoggerDelegateTest {
 	public void setUp() throws Exception {
 		MockitoAnnotations.initMocks(this);
 		Mocks.register("loggerDelegate", loggerDelegate);
+		Mocks.register("processTest.LoggerDelegate", loggerDelegate);
 	}
 
 	@After
@@ -50,7 +55,7 @@ public class LoggerDelegateTest {
 	}
 
 	/**
-	 * Test process: start -> execute mocked service task -> end
+	 * Test process: start -> execute mocked service task (camunda:expression) -> end
 	 */
 	@Test
 	@Deployment(resources = { "processWithoutTimer.bpmn" })
@@ -58,6 +63,21 @@ public class LoggerDelegateTest {
 	    processEngineRule.getRuntimeService().startProcessInstanceByKey("sample");
 	    verify(loggerDelegate).doSomething();
 	    verifyNoMoreInteractions(loggerDelegate);
+	}
+
+	/**
+	 * Test process: start -> execute mocked service task (camunda:class) -> end
+	 * Mocking camuda:class is not possible!
+	 */
+	@Test
+	@Deployment(resources = { "mockedClass.bpmn" })
+	public void testMockedClass() {
+		try {
+			processEngineRule.getRuntimeService().startProcessInstanceByKey("sample");
+			fail("The process should not be started because it refers to a non-existing class, which cannot be mocked");
+		} catch (ProcessEngineException pee) {
+			// expected behavior
+		}
 	}
 
 }
