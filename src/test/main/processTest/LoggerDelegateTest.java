@@ -1,12 +1,9 @@
 package processTest;
 
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 
-import java.util.Date;
-
-import org.camunda.bpm.engine.impl.ProcessEngineImpl;
-import org.camunda.bpm.engine.impl.test.TestHelper;
-import org.camunda.bpm.engine.runtime.ProcessInstance;
+import org.camunda.bpm.engine.runtime.Job;
 import org.camunda.bpm.engine.test.Deployment;
 import org.camunda.bpm.engine.test.ProcessEngineRule;
 import org.camunda.bpm.engine.test.mock.Mocks;
@@ -16,8 +13,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-
-import static org.mockito.Mockito.*;
 
 import com.ista.dmi.LoggerDelegate;
 
@@ -39,24 +34,28 @@ public class LoggerDelegateTest {
 	public void tearDown() throws Exception {
 	}
 
+	/** 
+	 * Test process with timer event: start -> wait 1 minute -> execute mocked service task -> end
+	 */
 	@Test
 	@Deployment(resources = { "processWithTimer.bpmn" })
 	public void testWithTimer() {
-		ProcessEngineImpl processEngine = (ProcessEngineImpl) processEngineRule.getProcessEngine();
-	    ProcessInstance processInstance = processEngineRule.getRuntimeService().startProcessInstanceByKey("sample");
-		// wait for 2 seconds
-		Date now = new Date();
-		processEngineRule.setCurrentTime(new Date(now.getTime() + 2 * 60 * 1000 * 1000));
-		TestHelper.waitForJobExecutorToProcessAllJobs(processEngine.getProcessEngineConfiguration(), 1000, 100);
-
+	    processEngineRule.getRuntimeService().startProcessInstanceByKey("sample");
+	    // there is now a single job in the bpmn engine which needs to be triggered manually
+	    Job job = processEngineRule.getManagementService().createJobQuery().singleResult();
+	    processEngineRule.getManagementService().executeJob(job.getId());
+	    // verify that delegate has been executed
 	    verify(loggerDelegate).doSomething();
 	    verifyNoMoreInteractions(loggerDelegate);
 	}
 
+	/**
+	 * Test process: start -> execute mocked service task -> end
+	 */
 	@Test
 	@Deployment(resources = { "processWithoutTimer.bpmn" })
 	public void testWithoutTimer() {
-	    ProcessInstance processInstance = processEngineRule.getRuntimeService().startProcessInstanceByKey("sample");
+	    processEngineRule.getRuntimeService().startProcessInstanceByKey("sample");
 	    verify(loggerDelegate).doSomething();
 	    verifyNoMoreInteractions(loggerDelegate);
 	}
